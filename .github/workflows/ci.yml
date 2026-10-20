@@ -1,0 +1,58 @@
+name: Repository CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  merge_group:
+    types: [checks_requested]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  repository-checks:
+    name: repository-checks
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Check Markdown formatting
+        uses: DavidAnson/markdownlint-cli2-action@21c1be1b93ad9ed58fa840aacc3f279cde2a72ff # v24.2.0
+        with:
+          globs: '**/*.md'
+
+      - name: Check local documentation links and anchors
+        uses: lycheeverse/lychee-action@e7477775783ea5526144ba13e8db5eec57747ce8 # v2.9.0
+        with:
+          args: --offline --include-fragments --no-progress './**/*.md'
+          lycheeVersion: v0.24.2
+          fail: true
+          failIfEmpty: true
+          output: ${{ runner.temp }}/socialscope-links.md
+
+      - name: Check GitHub Actions workflows
+        shell: bash
+        env:
+          ACTIONLINT_VERSION: 1.7.12
+          ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+        run: |
+          set -euo pipefail
+          tool_dir="${RUNNER_TEMP}/socialscope-actionlint"
+          mkdir -p "$tool_dir"
+          archive="actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          curl --fail --silent --show-error --location --retry 3 \
+            "https://github.com/rhysd/actionlint/releases/download/v${ACTIONLINT_VERSION}/${archive}" \
+            --output "${tool_dir}/${archive}"
+          printf '%s  %s\n' "$ACTIONLINT_SHA256" "${tool_dir}/${archive}" | sha256sum --check
+          tar -xzf "${tool_dir}/${archive}" -C "$tool_dir" actionlint
+          "${tool_dir}/actionlint" -color

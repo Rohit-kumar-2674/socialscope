@@ -1,0 +1,13 @@
+{
+  "config": {
+    "MD013": {
+      "line_length": 100
+    }
+  },
+  "ignores": [
+    "**/node_modules/**",
+    "**/.next/**",
+    "**/dist/**",
+    "**/coverage/**"
+  ]
+}

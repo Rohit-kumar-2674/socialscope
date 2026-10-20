@@ -1,0 +1,10 @@
+node_modules/
+.next/
+dist/
+coverage/
+.lycheecache
+lychee/
+.env
+.env.*
+!.env.example
+!*.env.example
